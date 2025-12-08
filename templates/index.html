@@ -224,42 +224,19 @@
                 <p>Calculating financial projections...</p>
             </div>
 
-            <!-- Saved Calculations Section -->
-            <section id="savedCalculations" class="section">
-                <div class="section-header">
-                    <h2 class="section-title">Saved Calculations</h2>
-                    <p class="section-subtitle">View and manage your previously saved financial projections</p>
-                </div>
-
-                <div class="saved-calculations-toolbar">
-                    <button class="btn btn-secondary" onclick="showSavedCalculations()">
-                        <i class="fas fa-folder-open"></i> View Saved Calculations
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportAllCalculations()">
-                        <i class="fas fa-file-export"></i> Export All
-                    </button>
-                    <button class="btn btn-secondary" onclick="importCalculations()">
-                        <i class="fas fa-file-import"></i> Import
-                    </button>
-                    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
-                </div>
-
-                <div id="savedCalculationsGrid" class="saved-calculations-grid">
-                    <!-- Saved calculation cards will be populated here -->
-                </div>
-            </section>
-
             <!-- Results Section -->
             <section id="results" class="section hidden">
                 <div class="section-header">
                     <h2 class="section-title">Financial Projections & Analysis</h2>
                     <p class="section-subtitle">Comprehensive breakdown of your financial future</p>
                     <div class="section-actions">
-                        <button class="btn btn-primary" onclick="saveCurrentCalculation()">
-                            <i class="fas fa-save"></i> Save Calculation
+                        <button class="btn-gradient btn-gradient-primary" onclick="saveCurrentCalculation()">
+                            <i class="fas fa-save"></i>
+                            <span>Save Calculation</span>
                         </button>
-                        <button class="btn btn-secondary" onclick="exportCurrentCalculation()">
-                            <i class="fas fa-download"></i> Export JSON
+                        <button class="btn-gradient btn-gradient-secondary" onclick="exportCurrentCalculation()">
+                            <i class="fas fa-download"></i>
+                            <span>Export JSON</span>
                         </button>
                     </div>
                 </div>
@@ -425,6 +402,22 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Comparison Results Section -->
+            <section id="comparisonResults" class="section hidden">
+                <div class="section-header">
+                    <h2 class="section-title">Comparison Results</h2>
+                    <p class="section-subtitle">Side-by-side analysis of selected calculations</p>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary" onclick="closeComparisonResults()">
+                            <i class="fas fa-times"></i> Close Comparison
+                        </button>
+                    </div>
+                </div>
+                <div id="comparisonContent">
+                    <!-- Comparison content will be populated here -->
+                </div>
+            </section>
         </div>
     </main>
 
@@ -463,6 +456,138 @@
             </div>
         </div>
     </div>
+
+    <!-- Rename Calculation Modal -->
+    <div id="renameModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Rename Calculation</h3>
+                <button class="modal-close" onclick="closeRenameModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="renameCalculationName">New Name</label>
+                    <input type="text" id="renameCalculationName" placeholder="Enter new name" 
+                           style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div class="form-group">
+                    <label for="renameCalculationNotes">Notes (Optional)</label>
+                    <textarea id="renameCalculationNotes" rows="3" placeholder="Update notes..."
+                              style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; font-family: inherit;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRenameModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmRenameCalculation()">
+                    <i class="fas fa-check"></i> Update
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Selection Modal -->
+    <div id="compareModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-balance-scale"></i> Select Calculations to Compare</h3>
+                <button class="modal-close" onclick="closeCompareModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">Select 2-4 calculations to compare</p>
+                <div id="compareSelectionList" class="compare-selection-list">
+                    <!-- Calculation selection checkboxes will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCompareModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCompareSelection()">
+                    <i class="fas fa-check"></i> Compare Selected
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button Menu -->
+    <div class="fab-container">
+        <button class="fab-main" id="fabMain" onclick="toggleFabMenu()" title="Quick Actions">
+            <i class="fas fa-plus fab-icon"></i>
+        </button>
+        <div class="fab-menu" id="fabMenu">
+            <button class="fab-option" onclick="openSavedPanel()" data-tooltip="Saved Calculations">
+                <i class="fas fa-folder-open"></i>
+                <span class="fab-label">Saved</span>
+            </button>
+            <button class="fab-option" onclick="openComparePanel()" data-tooltip="Compare">
+                <i class="fas fa-balance-scale"></i>
+                <span class="fab-label">Compare</span>
+            </button>
+            <button class="fab-option" onclick="importCalculations()" data-tooltip="Import">
+                <i class="fas fa-file-import"></i>
+                <span class="fab-label">Import</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sidebar Panel - Saved Calculations -->
+    <div class="sidebar-panel" id="savedPanel">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <i class="fas fa-folder-open"></i>
+                <h3>Saved Calculations</h3>
+                <span class="saved-count-badge" id="savedCountBadge">0</span>
+            </div>
+            <button class="sidebar-close" onclick="closeSavedPanel()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="sidebar-toolbar">
+            <div class="sidebar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="sidebarSearch" placeholder="Search calculations..." oninput="handleSidebarSearch(this.value)">
+            </div>
+            <div class="sidebar-actions">
+                <button class="btn-icon-small" onclick="exportAllCalculations()" title="Export All">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button class="btn-icon-small" onclick="importCalculations()" title="Import">
+                    <i class="fas fa-upload"></i>
+                </button>
+            </div>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
+        </div>
+        <div class="sidebar-content" id="savedPanelContent">
+            <!-- Saved calculations will be populated here -->
+        </div>
+    </div>
+
+    <!-- Sidebar Panel - Compare -->
+    <div class="sidebar-panel" id="comparePanel">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <i class="fas fa-balance-scale"></i>
+                <h3>Compare Calculations</h3>
+                <span class="compare-count-badge" id="compareCountBadge" style="display: none;">0</span>
+            </div>
+            <button class="sidebar-close" onclick="closeComparePanel()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="sidebar-toolbar">
+            <button class="btn btn-primary" onclick="showCompareSelection()" style="width: 100%;">
+                <i class="fas fa-plus-circle"></i> Select Calculations
+            </button>
+        </div>
+        <div class="sidebar-content" id="comparePanelContent">
+            <div class="compare-empty-mini">
+                <i class="fas fa-balance-scale"></i>
+                <p>No calculations selected</p>
+                <small>Select 2-4 calculations to compare</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeAllPanels()"></div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

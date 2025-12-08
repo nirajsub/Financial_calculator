@@ -7,11 +7,17 @@ let currentResults = null;
 let emergencyWithdrawalCounter = 0;
 let utilizationOverrideCounter = 0;
 let currentInputs = null;
+let selectedCalculationsForCompare = [];
+let currentViewMode = 'grid';
+let currentSortMode = 'newest';
+let searchQuery = '';
+let sidebarSearchQuery = '';
 const STORAGE_KEY = 'financial_calculations';
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    updateSavedCountBadge();
 });
 
 function initializeApp() {
@@ -1075,12 +1081,87 @@ function confirmSaveCalculation() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     
     closeSaveModal();
+    updateSavedCountBadge();
     alert(`Calculation "${name}" saved successfully!`);
     
     // Refresh saved calculations display if visible
     if (document.getElementById('savedCalculationsGrid').children.length > 0) {
         displaySavedCalculations();
     }
+}
+
+// Rename Modal Functions
+function openRenameModal(calcId) {
+    const saved = getSavedCalculations();
+    const calculation = saved.find(c => c.id === calcId);
+    
+    if (!calculation) {
+        alert('Calculation not found.');
+        return;
+    }
+    
+    // Store the ID for later use
+    document.getElementById('renameModal').dataset.calcId = calcId;
+    
+    // Populate fields with current values
+    document.getElementById('renameCalculationName').value = calculation.name;
+    document.getElementById('renameCalculationNotes').value = calculation.notes || '';
+    
+    // Show modal
+    document.getElementById('renameModal').classList.remove('hidden');
+    document.getElementById('renameCalculationName').focus();
+}
+
+function closeRenameModal() {
+    document.getElementById('renameModal').classList.add('hidden');
+    delete document.getElementById('renameModal').dataset.calcId;
+}
+
+function confirmRenameCalculation() {
+    const name = document.getElementById('renameCalculationName').value.trim();
+    const notes = document.getElementById('renameCalculationNotes').value.trim();
+    const calcId = document.getElementById('renameModal').dataset.calcId;
+    
+    if (!name) {
+        alert('Please enter a name for this calculation.');
+        return;
+    }
+    
+    if (!calcId) {
+        alert('Error: Calculation ID not found.');
+        return;
+    }
+    
+    // Get existing calculations
+    const saved = getSavedCalculations();
+    const index = saved.findIndex(c => c.id === calcId);
+    
+    if (index === -1) {
+        alert('Calculation not found.');
+        closeRenameModal();
+        return;
+    }
+    
+    // Update name and notes
+    saved[index].name = name;
+    saved[index].notes = notes;
+    
+    // Save back to localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    
+    closeRenameModal();
+    
+    // Refresh displays
+    const sidebarPanel = document.getElementById('savedPanel');
+    if (sidebarPanel && sidebarPanel.classList.contains('active')) {
+        displaySavedInSidebar();
+    }
+    
+    if (document.getElementById('savedCalculationsGrid').children.length > 0) {
+        displaySavedCalculations();
+    }
+    
+    alert(`Calculation renamed to "${name}" successfully!`);
 }
 
 function getSavedCalculations() {
@@ -1100,65 +1181,212 @@ function displaySavedCalculations() {
     const saved = getSavedCalculations();
     const container = document.getElementById('savedCalculationsGrid');
     
+    // Setup toolbar if not exists
+    setupSavedCalculationsToolbar();
+    
     if (saved.length === 0) {
+        container.className = 'saved-calculations-grid';
         container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-secondary);">
-                <i class="fas fa-folder-open" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-                <p style="font-size: 1.125rem;">No saved calculations yet</p>
-                <p style="font-size: 0.875rem; margin-top: 0.5rem;">Run a calculation and click "Save Calculation" to save it for later</p>
+            <div class="no-results-state">
+                <i class="fas fa-folder-open"></i>
+                <h3>No saved calculations yet</h3>
+                <p>Run a calculation and click "Save Calculation" to save it for later</p>
             </div>
         `;
         return;
     }
     
-    // Sort by timestamp (newest first)
-    saved.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Filter by search query
+    let filtered = saved.filter(calc => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return calc.name.toLowerCase().includes(query) || 
+               (calc.notes && calc.notes.toLowerCase().includes(query));
+    });
     
-    container.innerHTML = saved.map(calc => {
+    // Sort calculations
+    switch(currentSortMode) {
+        case 'newest':
+            filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            break;
+        case 'oldest':
+            filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            break;
+        case 'name':
+            filtered.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'growth':
+            filtered.sort((a, b) => b.summary.growth.total - a.summary.growth.total);
+            break;
+    }
+    
+    // Update view mode class
+    container.className = `saved-calculations-grid ${currentViewMode === 'list' ? 'list-view' : ''}`;
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="no-results-state">
+                <i class="fas fa-search"></i>
+                <h3>No calculations found</h3>
+                <p>Try adjusting your search query</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filtered.map((calc, index) => {
         const date = new Date(calc.timestamp);
-        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const growthColor = calc.summary.growth.total >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+        const growthIcon = calc.summary.growth.total >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
         
         return `
-            <div class="saved-calculation-card">
+            <div class="saved-calculation-card" style="animation-delay: ${index * 50}ms;">
                 <div class="saved-calc-header">
-                    <h4>${calc.name}</h4>
+                    <div class="saved-calc-title-section">
+                        <h4>
+                            <i class="fas fa-file-invoice-dollar" style="color: var(--primary-color); font-size: 1rem;"></i>
+                            ${calc.name}
+                        </h4>
+                        <div class="saved-calc-meta">
+                            <span class="saved-calc-meta-item">
+                                <i class="fas fa-calendar"></i>
+                                ${dateStr}
+                            </span>
+                            <span class="saved-calc-meta-item">
+                                <i class="fas fa-clock"></i>
+                                ${timeStr}
+                            </span>
+                        </div>
+                    </div>
                     <div class="saved-calc-actions">
-                        <button class="btn-icon" onclick="loadCalculation('${calc.id}')" title="Load">
-                            <i class="fas fa-folder-open"></i>
-                        </button>
-                        <button class="btn-icon" onclick="exportCalculation('${calc.id}')" title="Export">
+                        <button class="btn-icon" onclick="exportCalculation('${calc.id}')" title="Export JSON">
                             <i class="fas fa-download"></i>
                         </button>
-                        <button class="btn-icon" onclick="deleteCalculation('${calc.id}')" title="Delete" style="color: #ef4444;">
+                        <button class="btn-icon" onclick="deleteCalculation('${calc.id}')" title="Delete" style="color: var(--danger-color);">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
                 <div class="saved-calc-info">
-                    <small><i class="fas fa-clock"></i> ${dateStr}</small>
-                    ${calc.notes ? `<p class="saved-calc-notes">${calc.notes}</p>` : ''}
+                    ${calc.notes ? `<div class="saved-calc-notes"><i class="fas fa-sticky-note"></i>${calc.notes}</div>` : ''}
                 </div>
                 <div class="saved-calc-summary">
                     <div class="saved-calc-stat">
-                        <span class="label">Initial Capital</span>
+                        <span class="label"><i class="fas fa-wallet"></i> Initial</span>
                         <span class="value">${formatCurrency(calc.summary.initial.total)}</span>
                     </div>
                     <div class="saved-calc-stat">
-                        <span class="label">Final Capital</span>
+                        <span class="label"><i class="fas fa-chart-line"></i> Final</span>
                         <span class="value">${formatCurrency(calc.summary.final.total)}</span>
                     </div>
                     <div class="saved-calc-stat">
-                        <span class="label">Growth</span>
-                        <span class="value text-success">+${calc.summary.growth.total.toFixed(1)}%</span>
+                        <span class="label"><i class="fas ${growthIcon}"></i> Growth</span>
+                        <span class="value" style="color: ${growthColor};">${calc.summary.growth.total >= 0 ? '+' : ''}${calc.summary.growth.total.toFixed(2)}%</span>
                     </div>
                     <div class="saved-calc-stat">
-                        <span class="label">Years</span>
+                        <span class="label"><i class="fas fa-hourglass-half"></i> Years</span>
                         <span class="value">${calc.results.length}</span>
+                    </div>
+                </div>
+                <div class="saved-calc-footer">
+                    <div class="saved-calc-actions-primary">
+                        <button class="btn-load" onclick="loadCalculation('${calc.id}')">
+                            <i class="fas fa-folder-open"></i>
+                            Load Calculation
+                        </button>
+                        <button class="btn-compare-add" onclick="quickAddToCompare('${calc.id}')" title="Add to Compare">
+                            <i class="fas fa-balance-scale"></i>
+                        </button>
                     </div>
                 </div>
             </div>
         `;
     }).join('');
+}
+
+function setupSavedCalculationsToolbar() {
+    const toolbar = document.querySelector('.saved-calculations-toolbar');
+    if (!toolbar || toolbar.dataset.setup === 'true') return;
+    
+    toolbar.dataset.setup = 'true';
+    toolbar.innerHTML = `
+        <div class="saved-calc-controls">
+            <div class="saved-calc-search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" 
+                       id="savedCalcSearch" 
+                       class="saved-calc-search" 
+                       placeholder="Search calculations by name or notes..."
+                       oninput="handleSearchChange(this.value)">
+            </div>
+            <select id="savedCalcSort" class="saved-calc-sort" onchange="handleSortChange(this.value)">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="name">Name (A-Z)</option>
+                <option value="growth">Highest Growth</option>
+            </select>
+        </div>
+        <div class="saved-calc-view-toggle">
+            <button class="view-toggle-btn active" onclick="setViewMode('grid')" data-view="grid">
+                <i class="fas fa-th"></i>
+            </button>
+            <button class="view-toggle-btn" onclick="setViewMode('list')" data-view="list">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
+        <button class="btn btn-secondary" onclick="exportAllCalculations()">
+            <i class="fas fa-file-export"></i> Export All
+        </button>
+        <button class="btn btn-secondary" onclick="importCalculations()">
+            <i class="fas fa-file-import"></i> Import
+        </button>
+    `;
+}
+
+function handleSearchChange(query) {
+    searchQuery = query;
+    displaySavedCalculations();
+}
+
+function handleSortChange(mode) {
+    currentSortMode = mode;
+    displaySavedCalculations();
+}
+
+function setViewMode(mode) {
+    currentViewMode = mode;
+    
+    // Update button states
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === mode);
+    });
+    
+    displaySavedCalculations();
+}
+
+function quickAddToCompare(id) {
+    const index = selectedCalculationsForCompare.indexOf(id);
+    
+    if (index > -1) {
+        selectedCalculationsForCompare.splice(index, 1);
+        alert('Removed from comparison selection');
+    } else {
+        if (selectedCalculationsForCompare.length >= 4) {
+            alert('You can only compare up to 4 calculations at once.');
+            return;
+        }
+        selectedCalculationsForCompare.push(id);
+        alert(`Added to comparison (${selectedCalculationsForCompare.length} selected)`);
+    }
+    
+    // If we have at least 2, show option to view comparison
+    if (selectedCalculationsForCompare.length >= 2) {
+        if (confirm(`You have ${selectedCalculationsForCompare.length} calculations selected. View comparison now?`)) {
+            confirmCompareSelection();
+        }
+    }
 }
 
 function loadCalculation(id) {
@@ -1392,4 +1620,802 @@ function downloadChart(chartId) {
     a.href = url;
     a.download = chartId + '.png';
     a.click();
+}
+
+// ===================================
+// FAB Menu & Sidebar Functions
+// ===================================
+
+function toggleFabMenu() {
+    const fabMain = document.getElementById('fabMain');
+    const fabMenu = document.getElementById('fabMenu');
+    
+    fabMain.classList.toggle('active');
+    fabMenu.classList.toggle('active');
+}
+
+function closeFabMenu() {
+    const fabMain = document.getElementById('fabMain');
+    const fabMenu = document.getElementById('fabMenu');
+    
+    fabMain.classList.remove('active');
+    fabMenu.classList.remove('active');
+}
+
+function openSavedPanel() {
+    closeFabMenu();
+    closeAllPanels();
+    
+    const panel = document.getElementById('savedPanel');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    
+    displaySavedInSidebar();
+}
+
+function closeSavedPanel() {
+    const panel = document.getElementById('savedPanel');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+function openComparePanel() {
+    closeFabMenu();
+    closeAllPanels();
+    
+    const panel = document.getElementById('comparePanel');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    
+    displayCompareInSidebar();
+}
+
+function closeComparePanel() {
+    const panel = document.getElementById('comparePanel');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+function closeAllPanels() {
+    const panels = document.querySelectorAll('.sidebar-panel');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    panels.forEach(panel => panel.classList.remove('active'));
+    overlay.classList.remove('active');
+}
+
+function updateSavedCountBadge() {
+    const saved = getSavedCalculations();
+    const badge = document.getElementById('savedCountBadge');
+    if (badge) {
+        badge.textContent = saved.length;
+    }
+}
+
+function updateCompareCountBadge() {
+    const badge = document.getElementById('compareCountBadge');
+    if (badge) {
+        if (selectedCalculationsForCompare.length > 0) {
+            badge.style.display = 'inline-flex';
+            badge.textContent = selectedCalculationsForCompare.length;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function handleSidebarSearch(query) {
+    sidebarSearchQuery = query;
+    displaySavedInSidebar();
+}
+
+function displaySavedInSidebar() {
+    const saved = getSavedCalculations();
+    const container = document.getElementById('savedPanelContent');
+    
+    if (saved.length === 0) {
+        container.innerHTML = `
+            <div class="sidebar-no-results">
+                <i class="fas fa-folder-open"></i>
+                <p>No saved calculations yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Filter by search query
+    let filtered = saved.filter(calc => {
+        if (!sidebarSearchQuery) return true;
+        const query = sidebarSearchQuery.toLowerCase();
+        return calc.name.toLowerCase().includes(query) || 
+               (calc.notes && calc.notes.toLowerCase().includes(query));
+    });
+    
+    // Sort by newest first
+    filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="sidebar-no-results">
+                <i class="fas fa-search"></i>
+                <p>No calculations found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filtered.map(calc => {
+        const date = new Date(calc.timestamp);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const growthColor = calc.summary.growth.total >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+        
+        return `
+            <div class="sidebar-calc-item">
+                <div class="sidebar-calc-header">
+                    <div>
+                        <h4 class="sidebar-calc-name">${calc.name}</h4>
+                        <div class="sidebar-calc-date">
+                            <i class="fas fa-calendar-alt"></i>
+                            ${dateStr}
+                        </div>
+                    </div>
+                    <div class="sidebar-calc-actions">
+                        <button class="sidebar-calc-btn" onclick="loadCalculationFromSidebar('${calc.id}')" title="Load">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                        <button class="sidebar-calc-btn" onclick="openRenameModal('${calc.id}')" title="Rename">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="sidebar-calc-btn" onclick="exportCalculation('${calc.id}')" title="Export">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="sidebar-calc-btn delete" onclick="deleteCalculationFromSidebar('${calc.id}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="sidebar-calc-stats">
+                    <div class="sidebar-calc-stat">
+                        <span class="sidebar-calc-stat-label">Initial</span>
+                        <span class="sidebar-calc-stat-value">${formatCurrency(calc.summary.initial.total)}</span>
+                    </div>
+                    <div class="sidebar-calc-stat">
+                        <span class="sidebar-calc-stat-label">Final</span>
+                        <span class="sidebar-calc-stat-value">${formatCurrency(calc.summary.final.total)}</span>
+                    </div>
+                    <div class="sidebar-calc-stat">
+                        <span class="sidebar-calc-stat-label">Growth</span>
+                        <span class="sidebar-calc-stat-value" style="color: ${growthColor};">
+                            ${calc.summary.growth.total >= 0 ? '+' : ''}${calc.summary.growth.total.toFixed(2)}%
+                        </span>
+                    </div>
+                    <div class="sidebar-calc-stat">
+                        <span class="sidebar-calc-stat-label">Years</span>
+                        <span class="sidebar-calc-stat-value">${calc.results.length}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function loadCalculationFromSidebar(id) {
+    loadCalculation(id);
+    closeSavedPanel();
+}
+
+function deleteCalculationFromSidebar(id) {
+    if (!confirm('Are you sure you want to delete this calculation?')) {
+        return;
+    }
+    
+    let saved = getSavedCalculations();
+    saved = saved.filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    
+    updateSavedCountBadge();
+    displaySavedInSidebar();
+}
+
+function displayCompareInSidebar() {
+    const container = document.getElementById('comparePanelContent');
+    
+    if (selectedCalculationsForCompare.length === 0) {
+        container.innerHTML = `
+            <div class="compare-empty-mini">
+                <i class="fas fa-balance-scale"></i>
+                <p>No calculations selected</p>
+                <small>Select 2-4 calculations to compare</small>
+            </div>
+        `;
+        return;
+    }
+    
+    const saved = getSavedCalculations();
+    const calculations = selectedCalculationsForCompare.map(id => 
+        saved.find(c => c.id === id)
+    ).filter(c => c !== undefined);
+    
+    container.innerHTML = `
+        <div style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--border-radius); margin-bottom: 1rem;">
+            <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                ${calculations.length} calculation${calculations.length > 1 ? 's' : ''} selected
+            </p>
+        </div>
+        ${calculations.map((calc, index) => `
+            <div class="sidebar-calc-item">
+                <div class="sidebar-calc-header">
+                    <div>
+                        <h4 class="sidebar-calc-name">${calc.name}</h4>
+                    </div>
+                    <button class="sidebar-calc-btn delete" onclick="removeFromCompareInSidebar('${calc.id}')" title="Remove">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sidebar-calc-stats">
+                    <div class="sidebar-calc-stat">
+                        <span class="sidebar-calc-stat-label">Growth</span>
+                        <span class="sidebar-calc-stat-value" style="color: var(--success-color);">
+                            +${calc.summary.growth.total.toFixed(2)}%
+                        </span>
+                    </div>
+                    <div class="sidebar-calc-stat">
+                        <span class="sidebar-calc-stat-label">Final</span>
+                        <span class="sidebar-calc-stat-value">${formatCurrency(calc.summary.final.total)}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('')}
+        ${calculations.length >= 2 ? `
+            <button class="btn btn-primary" onclick="performComparisonFromSidebar()" style="width: 100%; margin-top: 1rem;">
+                <i class="fas fa-chart-line"></i> View Comparison
+            </button>
+        ` : ''}
+    `;
+    
+    updateCompareCountBadge();
+}
+
+function removeFromCompareInSidebar(id) {
+    const index = selectedCalculationsForCompare.indexOf(id);
+    if (index > -1) {
+        selectedCalculationsForCompare.splice(index, 1);
+    }
+    displayCompareInSidebar();
+}
+
+function performComparisonFromSidebar() {
+    closeComparePanel();
+    performComparison();
+    
+    // Scroll to comparison results
+    setTimeout(() => {
+        document.getElementById('comparisonResults').scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }, 300);
+}
+
+function closeComparisonResults() {
+    const section = document.getElementById('comparisonResults');
+    section.classList.add('hidden');
+}
+
+function scrollToResults() {
+    const resultsSection = document.getElementById('results');
+    if (resultsSection) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// Compare Functionality
+// =====================
+
+function showCompareSelection() {
+    const saved = getSavedCalculations();
+    
+    if (saved.length < 2) {
+        alert('You need at least 2 saved calculations to compare. Please save more calculations first.');
+        return;
+    }
+    
+    const modal = document.getElementById('compareModal');
+    const list = document.getElementById('compareSelectionList');
+    
+    // Sort by timestamp (newest first)
+    saved.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    list.innerHTML = saved.map(calc => {
+        const date = new Date(calc.timestamp);
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        const isSelected = selectedCalculationsForCompare.includes(calc.id);
+        
+        return `
+            <div class="compare-selection-item">
+                <label class="compare-checkbox-label">
+                    <input type="checkbox" value="${calc.id}" ${isSelected ? 'checked' : ''} 
+                           onchange="toggleCompareSelection('${calc.id}')">
+                    <div class="compare-item-info">
+                        <strong>${calc.name}</strong>
+                        <small style="display: block; color: var(--text-secondary); margin-top: 0.25rem;">
+                            <i class="fas fa-clock"></i> ${dateStr}
+                        </small>
+                        <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.875rem;">
+                            <span><i class="fas fa-wallet"></i> Initial: ${formatCurrency(calc.summary.initial.total)}</span>
+                            <span><i class="fas fa-chart-line"></i> Final: ${formatCurrency(calc.summary.final.total)}</span>
+                            <span class="text-success"><i class="fas fa-arrow-up"></i> ${calc.summary.growth.total.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `;
+    }).join('');
+    
+    modal.classList.remove('hidden');
+}
+
+function closeCompareModal() {
+    document.getElementById('compareModal').classList.add('hidden');
+}
+
+function toggleCompareSelection(id) {
+    const index = selectedCalculationsForCompare.indexOf(id);
+    
+    if (index > -1) {
+        selectedCalculationsForCompare.splice(index, 1);
+    } else {
+        if (selectedCalculationsForCompare.length >= 4) {
+            alert('You can only compare up to 4 calculations at once.');
+            // Uncheck the checkbox
+            const checkbox = document.querySelector(`input[value="${id}"]`);
+            if (checkbox) checkbox.checked = false;
+            return;
+        }
+        selectedCalculationsForCompare.push(id);
+    }
+    updateCompareCountBadge();
+}
+
+function confirmCompareSelection() {
+    if (selectedCalculationsForCompare.length < 2) {
+        alert('Please select at least 2 calculations to compare.');
+        return;
+    }
+    
+    closeCompareModal();
+    updateCompareCountBadge();
+    
+    // Open compare panel to show selections
+    openComparePanel();
+}
+
+function performComparison() {
+    const saved = getSavedCalculations();
+    const calculations = selectedCalculationsForCompare.map(id => 
+        saved.find(c => c.id === id)
+    ).filter(c => c !== undefined);
+    
+    if (calculations.length === 0) {
+        clearComparison();
+        return;
+    }
+    
+    // Show comparison results section
+    const comparisonSection = document.getElementById('comparisonResults');
+    const container = document.getElementById('comparisonContent');
+    comparisonSection.classList.remove('hidden');
+    
+    // Create comparison view
+    container.innerHTML = `
+        <div class="compare-header">
+            <h3><i class="fas fa-balance-scale"></i> Comparing ${calculations.length} Calculations</h3>
+        </div>
+        
+        <!-- Summary Comparison Cards -->
+        <div class="compare-summary-grid">
+            ${calculations.map((calc, index) => `
+                <div class="compare-calc-card" style="border-top: 4px solid ${getCompareColor(index)};">
+                    <div class="compare-calc-header">
+                        <h4>${calc.name}</h4>
+                        <button class="btn-icon" onclick="removeFromCompare('${calc.id}')" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="compare-calc-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Initial Capital</span>
+                            <span class="stat-value">${formatCurrency(calc.summary.initial.total)}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Final Capital</span>
+                            <span class="stat-value">${formatCurrency(calc.summary.final.total)}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Growth</span>
+                            <span class="stat-value text-success">${calc.summary.growth.total.toFixed(2)}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Investment Growth</span>
+                            <span class="stat-value">${calc.summary.growth.investment.toFixed(2)}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Savings Growth</span>
+                            <span class="stat-value">${calc.summary.growth.savings.toFixed(2)}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Years</span>
+                            <span class="stat-value">${calc.results.length}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Avg Annual Return</span>
+                            <span class="stat-value">${(calc.summary.growth.total / calc.results.length).toFixed(2)}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Expenses</span>
+                            <span class="stat-value">${formatCurrency(calc.results.reduce((sum, r) => sum + r.actual_expense, 0))}</span>
+                        </div>
+                    </div>
+                    ${calc.notes ? `<div class="compare-calc-notes"><i class="fas fa-sticky-note"></i> ${calc.notes}</div>` : ''}
+                </div>
+            `).join('')}
+        </div>
+        
+        <!-- Comparison Charts -->
+        <div class="compare-charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-line"></i> Total Capital Comparison</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="compareTotalCapitalChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-area"></i> Investment vs Savings</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="compareInvestmentSavingsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-bar"></i> Annual Returns Comparison</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="compareReturnsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-piggy-bank"></i> Final Capital Distribution</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="compareFinalDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Detailed Comparison Table -->
+        <div class="compare-table-section">
+            <h3><i class="fas fa-table"></i> Input Parameters Comparison</h3>
+            <div class="table-container">
+                <table class="data-table compare-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            ${calculations.map(calc => `<th>${calc.name}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Initial Capital</strong></td>
+                            ${calculations.map(calc => `<td>${formatCurrency(calc.inputs.total_capital)}</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Investment Return Rate</strong></td>
+                            ${calculations.map(calc => `<td>${calc.inputs.annual_return_rate}%</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Savings Return Rate</strong></td>
+                            ${calculations.map(calc => `<td>${calc.inputs.savings_return_rate}%</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Monthly Expense</strong></td>
+                            ${calculations.map(calc => `<td>${formatCurrency(calc.inputs.monthly_expense_allocation)}</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Expense Utilization</strong></td>
+                            ${calculations.map(calc => `<td>${calc.inputs.expense_utilization_rate}%</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Expense Increase Rate</strong></td>
+                            ${calculations.map(calc => `<td>${calc.inputs.annual_expense_increase_rate}%</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Years</strong></td>
+                            ${calculations.map(calc => `<td>${calc.inputs.years}</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td><strong>Emergency Withdrawals</strong></td>
+                            ${calculations.map(calc => `<td>${calc.inputs.emergency_withdrawals?.length || 0}</td>`).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    // Render comparison charts
+    renderComparisonCharts(calculations);
+}
+
+function renderComparisonCharts(calculations) {
+    const colors = calculations.map((_, index) => getCompareColor(index));
+    
+    // Destroy existing charts
+    ['compareTotalCapitalChart', 'compareInvestmentSavingsChart', 'compareReturnsChart', 'compareFinalDistributionChart'].forEach(id => {
+        if (chartInstances[id]) {
+            chartInstances[id].destroy();
+        }
+    });
+    
+    // Total Capital Comparison
+    const maxYears = Math.max(...calculations.map(c => c.results.length));
+    chartInstances.compareTotalCapitalChart = new Chart(
+        document.getElementById('compareTotalCapitalChart'),
+        {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: maxYears }, (_, i) => `Year ${i + 1}`),
+                datasets: calculations.map((calc, index) => ({
+                    label: calc.name,
+                    data: calc.results.map(r => r.total_capital_end),
+                    borderColor: colors[index],
+                    backgroundColor: colors[index] + '20',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: false
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: (value) => formatCurrency(value)
+                        }
+                    }
+                }
+            }
+        }
+    );
+    
+    // Investment vs Savings
+    chartInstances.compareInvestmentSavingsChart = new Chart(
+        document.getElementById('compareInvestmentSavingsChart'),
+        {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: maxYears }, (_, i) => `Year ${i + 1}`),
+                datasets: calculations.flatMap((calc, index) => [
+                    {
+                        label: `${calc.name} - Investment`,
+                        data: calc.results.map(r => r.investment_capital_end),
+                        borderColor: colors[index],
+                        backgroundColor: colors[index] + '20',
+                        borderWidth: 2,
+                        borderDash: [],
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: `${calc.name} - Savings`,
+                        data: calc.results.map(r => r.savings_capital_end),
+                        borderColor: colors[index],
+                        backgroundColor: colors[index] + '20',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.4,
+                        fill: false
+                    }
+                ])
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: (value) => formatCurrency(value)
+                        }
+                    }
+                }
+            }
+        }
+    );
+    
+    // Annual Returns Comparison
+    chartInstances.compareReturnsChart = new Chart(
+        document.getElementById('compareReturnsChart'),
+        {
+            type: 'bar',
+            data: {
+                labels: Array.from({ length: maxYears }, (_, i) => `Year ${i + 1}`),
+                datasets: calculations.map((calc, index) => ({
+                    label: calc.name,
+                    data: calc.results.map(r => r.total_returns),
+                    backgroundColor: colors[index] + '80',
+                    borderColor: colors[index],
+                    borderWidth: 1
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => formatCurrency(value)
+                        }
+                    }
+                }
+            }
+        }
+    );
+    
+    // Final Capital Distribution
+    chartInstances.compareFinalDistributionChart = new Chart(
+        document.getElementById('compareFinalDistributionChart'),
+        {
+            type: 'bar',
+            data: {
+                labels: calculations.map(c => c.name),
+                datasets: [
+                    {
+                        label: 'Investment Capital',
+                        data: calculations.map(c => c.summary.final.investment),
+                        backgroundColor: '#3b82f6',
+                        borderColor: '#2563eb',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Savings Capital',
+                        data: calculations.map(c => c.summary.final.savings),
+                        backgroundColor: '#10b981',
+                        borderColor: '#059669',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => formatCurrency(value)
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+function getCompareColor(index) {
+    const colors = [
+        '#3b82f6', // blue
+        '#10b981', // green
+        '#f59e0b', // amber
+        '#ef4444'  // red
+    ];
+    return colors[index % colors.length];
+}
+
+function removeFromCompare(id) {
+    const index = selectedCalculationsForCompare.indexOf(id);
+    if (index > -1) {
+        selectedCalculationsForCompare.splice(index, 1);
+    }
+    
+    if (selectedCalculationsForCompare.length < 2) {
+        clearComparison();
+    } else {
+        performComparison();
+    }
+}
+
+function clearComparison() {
+    selectedCalculationsForCompare = [];
+    const container = document.getElementById('compareContainer');
+    container.innerHTML = `
+        <div class="compare-empty-state">
+            <i class="fas fa-balance-scale" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+            <p style="font-size: 1.125rem; color: var(--text-secondary);">No calculations selected for comparison</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">Click "Select Calculations to Compare" to get started</p>
+        </div>
+    `;
+    
+    // Destroy comparison charts
+    ['compareTotalCapitalChart', 'compareInvestmentSavingsChart', 'compareReturnsChart', 'compareFinalDistributionChart'].forEach(id => {
+        if (chartInstances[id]) {
+            chartInstances[id].destroy();
+            delete chartInstances[id];
+        }
+    });
 }
