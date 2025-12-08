@@ -41,19 +41,6 @@ Use investment capital only if savings insufficient
 Never go into debt
 
 
-🚀 Quick Start
-Installation
-
-# Clone the repository
-git clone https://github.com/yourusername/financial-manager-algorithm.git
-cd financial-manager-algorithm
-
-# Install dependencies (if any)
-pip install -r requirements.txt
-
-# Run the algorithm
-python app.py
-
 📈 Key Metrics Calculated
 Growth Metrics
 Total Wealth Growth: Percentage increase in total capital
