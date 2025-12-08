@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFGA - Professional Planning Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.44.0/dist/apexcharts.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i>
+                    <h1>NFGA</h1>
+                </div>
+                <nav class="nav">
+                    <a href="#calculator" class="nav-link active">Calculator</a>
+                    <a href="#results" class="nav-link">Results</a>
+                    <a href="#compare" class="nav-link">Compare</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2 class="hero-title">Professional Financial Planning Tool</h2>
+                <p class="hero-subtitle">Advanced portfolio management with investment & savings allocation, expense tracking, and comprehensive analytics</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Calculator Section -->
+            <section id="calculator" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Financial Calculator</h2>
+                    <p class="section-subtitle">Enter your financial parameters to generate comprehensive projections</p>
+                </div>
+
+                <div class="calculator-grid">
+                    <!-- Input Form -->
+                    <div class="calculator-card">
+                        <div class="card-header">
+                            <i class="fas fa-calculator"></i>
+                            <h3>Input Parameters</h3>
+                        </div>
+                        <form id="calculatorForm">
+                            <div class="form-grid">
+                                <!-- Capital Section -->
+                                <div class="form-group full-width">
+                                    <label for="total_capital">
+                                        <i class="fas fa-wallet"></i> Total Capital (₹)
+                                        <span class="info-icon" title="Your total initial investment capital">ⓘ</span>
+                                    </label>
+                                    <input type="number" id="total_capital" name="total_capital" value="20000000" step="100000" required>
+                                    <small class="help-text">Initial investment amount in Rupees</small>
+                                </div>
+
+                                <!-- Return Rates -->
+                                <div class="form-group">
+                                    <label for="annual_return_rate">
+                                        <i class="fas fa-chart-line"></i> Investment Return Rate (%)
+                                    </label>
+                                    <input type="number" id="annual_return_rate" name="annual_return_rate" value="20" step="0.5" min="0" max="100" required>
+                                    <small class="help-text">Expected annual return on investments</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="savings_return_rate">
+                                        <i class="fas fa-piggy-bank"></i> Savings Return Rate (%)
+                                    </label>
+                                    <input type="number" id="savings_return_rate" name="savings_return_rate" value="4" step="0.1" min="0" max="20" required>
+                                    <small class="help-text">Expected annual return on savings</small>
+                                </div>
+
+                                <!-- Expenses -->
+                                <div class="form-group">
+                                    <label for="monthly_expense_allocation">
+                                        <i class="fas fa-money-bill-wave"></i> Monthly Expense (₹)
+                                    </label>
+                                    <input type="number" id="monthly_expense_allocation" name="monthly_expense_allocation" value="150000" step="5000" required>
+                                    <small class="help-text">Monthly expense allocation</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="expense_utilization_rate">
+                                        <i class="fas fa-percentage"></i> Expense Utilization (%)
+                                    </label>
+                                    <input type="number" id="expense_utilization_rate" name="expense_utilization_rate" value="80" step="1" min="0" max="100" required>
+                                    <small class="help-text">Percentage of allocated expense actually spent</small>
+                                </div>
+
+                                <!-- Growth Parameters -->
+                                <div class="form-group">
+                                    <label for="annual_expense_increase_rate">
+                                        <i class="fas fa-arrow-trend-up"></i> Annual Expense Increase (%)
+                                    </label>
+                                    <input type="number" id="annual_expense_increase_rate" name="annual_expense_increase_rate" value="10" step="1" min="0" max="50" required>
+                                    <small class="help-text">Annual lifestyle inflation rate</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="years">
+                                        <i class="fas fa-calendar"></i> Projection Period (Years)
+                                    </label>
+                                    <input type="number" id="years" name="years" value="5" step="1" min="1" max="30" required>
+                                    <small class="help-text">Number of years to project</small>
+                                </div>
+                            </div>
+
+                            <!-- Emergency Withdrawals Section -->
+                            <div class="form-group full-width">
+                                <label>
+                                    <i class="fas fa-hand-holding-medical"></i> Emergency Withdrawals
+                                    <span class="info-icon" title="Plan for unexpected events like medical emergencies, disasters, etc.">ⓘ</span>
+                                </label>
+                                <div id="emergencyWithdrawalsContainer">
+                                    <!-- Emergency withdrawal rows will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="addEmergencyWithdrawal()" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-plus"></i> Add Emergency Withdrawal
+                                </button>
+                                <small class="help-text">Add emergency withdrawals for specific years (e.g., medical emergency, disaster relief)</small>
+                            </div>
+
+                            <!-- Expense Utilization Overrides Section -->
+                            <div class="form-group full-width">
+                                <label>
+                                    <i class="fas fa-sliders"></i> Expense Utilization Overrides
+                                    <span class="info-icon" title="Change expense utilization rates for specific periods (e.g., EMI payments, temporary expense increases)">ⓘ</span>
+                                </label>
+                                <div id="utilizationOverridesContainer">
+                                    <!-- Utilization override rows will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="addUtilizationOverride()" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-plus"></i> Add Utilization Override
+                                </button>
+                                <small class="help-text">Define periods with different expense utilization (e.g., Year 3-10: 95% due to Car EMI)</small>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-calculator"></i> Calculate Projections
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                    <i class="fas fa-redo"></i> Reset
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Quick Info Card -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <i class="fas fa-info-circle"></i>
+                            <h3>How It Works</h3>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-item">
+                                <div class="info-icon-wrapper">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div>
+                                <div class="info-text">
+                                    <h4>Smart Allocation</h4>
+                                    <p>75% of capital allocated to investments, 25% to savings for balanced growth</p>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon-wrapper">
+                                    <i class="fas fa-coins"></i>
+                                </div>
+                                <div class="info-text">
+                                    <h4>Dual Returns</h4>
+                                    <p>Earn returns from both investment portfolio and savings account</p>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon-wrapper">
+                                    <i class="fas fa-hand-holding-dollar"></i>
+                                </div>
+                                <div class="info-text">
+                                    <h4>Expense Management</h4>
+                                    <p>Track expenses with automatic savings from unutilized allocations</p>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon-wrapper">
+                                    <i class="fas fa-arrow-trend-up"></i>
+                                </div>
+                                <div class="info-text">
+                                    <h4>Lifestyle Inflation</h4>
+                                    <p>Accounts for annual increases in living expenses</p>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon-wrapper">
+                                    <i class="fas fa-shield-halved"></i>
+                                </div>
+                                <div class="info-text">
+                                    <h4>Risk Management</h4>
+                                    <p>Comprehensive deficit handling and capital preservation strategies</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="loading-spinner hidden">
+                <div class="spinner"></div>
+                <p>Calculating financial projections...</p>
+            </div>
+
+            <!-- Saved Calculations Section -->
+            <section id="savedCalculations" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Saved Calculations</h2>
+                    <p class="section-subtitle">View and manage your previously saved financial projections</p>
+                </div>
+
+                <div class="saved-calculations-toolbar">
+                    <button class="btn btn-secondary" onclick="showSavedCalculations()">
+                        <i class="fas fa-folder-open"></i> View Saved Calculations
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportAllCalculations()">
+                        <i class="fas fa-file-export"></i> Export All
+                    </button>
+                    <button class="btn btn-secondary" onclick="importCalculations()">
+                        <i class="fas fa-file-import"></i> Import
+                    </button>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
+                </div>
+
+                <div id="savedCalculationsGrid" class="saved-calculations-grid">
+                    <!-- Saved calculation cards will be populated here -->
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="results" class="section hidden">
+                <div class="section-header">
+                    <h2 class="section-title">Financial Projections & Analysis</h2>
+                    <p class="section-subtitle">Comprehensive breakdown of your financial future</p>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" onclick="saveCurrentCalculation()">
+                            <i class="fas fa-save"></i> Save Calculation
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportCurrentCalculation()">
+                            <i class="fas fa-download"></i> Export JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="summary-grid" id="summaryCards">
+                    <!-- Cards will be populated by JavaScript -->
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="charts-grid">
+                    <!-- Capital Growth Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-area"></i> Capital Growth Over Time</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('capitalGrowthChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="capitalGrowthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Asset Allocation Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-pie"></i> Asset Allocation Evolution</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('assetAllocationChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="assetAllocationChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Returns Analysis Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-bar"></i> Annual Returns Breakdown</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('returnsChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="returnsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Expense Coverage Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-line"></i> Expense Coverage Analysis</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('expenseCoverageChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="expenseCoverageChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Expense Growth Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-money-bill-trend-up"></i> Expense Growth Projection</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('expenseGrowthChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="expenseGrowthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Savings Accumulation Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-piggy-bank"></i> Savings Accumulation</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('savingsChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="savingsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Withdrawals Impact Chart -->
+                    <div class="chart-card" id="emergencyWithdrawalChartCard" style="display: none;">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-hand-holding-medical"></i> Emergency Withdrawals Impact</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('emergencyChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="emergencyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Expense Utilization Rate Chart -->
+                    <div class="chart-card" id="utilizationRateChartCard" style="display: none;">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-sliders"></i> Expense Utilization Rate Over Time</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('utilizationChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="utilizationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Table -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3><i class="fas fa-table"></i> Detailed Year-by-Year Breakdown</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="exportTableToCSV()">
+                            <i class="fas fa-file-csv"></i> Export to CSV
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="resultsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Year</th>
+                                    <th>Investment Capital</th>
+                                    <th>Savings Capital</th>
+                                    <th>Total Capital</th>
+                                    <th>Investment Return</th>
+                                    <th>Savings Return</th>
+                                    <th>Total Returns</th>
+                                    <th>Expense Allocation</th>
+                                    <th>Utilization %</th>
+                                    <th>Actual Expense</th>
+                                    <th>Emergency Withdrawal</th>
+                                    <th>Coverage %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody">
+                                <!-- Table rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Enhanced Financial Manager. All rights reserved.</p>
+            <p class="disclaimer">Disclaimer: This tool provides projections based on your inputs. Past performance is not indicative of future results. Consult a certified financial advisor for personalized advice.</p>
+        </div>
+    </footer>
+
+    <!-- Save Calculation Modal -->
+    <div id="saveModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-save"></i> Save Calculation</h3>
+                <button class="modal-close" onclick="closeSaveModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="calculationName">Calculation Name</label>
+                    <input type="text" id="calculationName" placeholder="e.g., Retirement Plan 2025" 
+                           style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div class="form-group">
+                    <label for="calculationNotes">Notes (Optional)</label>
+                    <textarea id="calculationNotes" rows="3" placeholder="Add any notes about this calculation..."
+                              style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; font-family: inherit;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaveModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmSaveCalculation()">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
