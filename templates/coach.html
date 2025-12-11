@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Financial Coach - FinBot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/coach.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="coach-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <a href="/" class="back-button">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div class="logo">
+                    <i class="fas fa-robot"></i>
+                    <span>FinBot</span>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <button class="btn-icon" id="contextBtn" title="Add Financial Context">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="badge" id="contextBadge">0</span>
+                </button>
+                <button class="btn-icon" id="settingsBtn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="btn-icon" id="clearBtn" title="Clear Conversation">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Chat Container -->
+    <div class="chat-container">
+        <!-- Sidebar with Context -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-chart-line"></i> Financial Context</h3>
+                <button class="btn-close-sidebar" id="closeSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <p class="sidebar-description">
+                    Share your financial information to get personalized advice
+                </p>
+                
+                <form id="contextForm" class="context-form">
+                    <div class="form-group">
+                        <label for="totalCapital">
+                            <i class="fas fa-wallet"></i> Total Capital
+                        </label>
+                        <input type="number" id="totalCapital" placeholder="100000" step="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="monthlyIncome">
+                            <i class="fas fa-dollar-sign"></i> Monthly Income
+                        </label>
+                        <input type="number" id="monthlyIncome" placeholder="5000" step="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="monthlyExpenses">
+                            <i class="fas fa-shopping-cart"></i> Monthly Expenses
+                        </label>
+                        <input type="number" id="monthlyExpenses" placeholder="3000" step="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="age">
+                            <i class="fas fa-birthday-cake"></i> Age
+                        </label>
+                        <input type="number" id="age" placeholder="30" min="18" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="investmentGoal">
+                            <i class="fas fa-bullseye"></i> Primary Goal
+                        </label>
+                        <select id="investmentGoal">
+                            <option value="">Select a goal...</option>
+                            <option value="retirement">Retirement</option>
+                            <option value="home">Home Purchase</option>
+                            <option value="education">Education Fund</option>
+                            <option value="wealth">Wealth Building</option>
+                            <option value="emergency">Emergency Fund</option>
+                            <option value="travel">Travel Fund</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="riskTolerance">
+                            <i class="fas fa-dice"></i> Risk Tolerance
+                        </label>
+                        <select id="riskTolerance">
+                            <option value="">Select risk level...</option>
+                            <option value="conservative">Conservative</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="aggressive">Aggressive</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="investmentAllocation">
+                            <i class="fas fa-chart-pie"></i> Investment Allocation (%)
+                        </label>
+                        <input type="number" id="investmentAllocation" placeholder="80" min="0" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="planningYears">
+                            <i class="fas fa-calendar-alt"></i> Planning Horizon (Years)
+                        </label>
+                        <input type="number" id="planningYears" placeholder="20" min="1" max="50">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary btn-block">
+                        <i class="fas fa-save"></i> Save Context
+                    </button>
+                </form>
+                
+                <div class="context-summary" id="contextSummary" style="display: none;">
+                    <h4>Active Context</h4>
+                    <div id="contextSummaryContent"></div>
+                    <button class="btn-secondary btn-block" id="editContext">
+                        <i class="fas fa-edit"></i> Edit Context
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Chat Area -->
+        <main class="chat-main">
+            <!-- Welcome Screen -->
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h1>Welcome to FinBot! 👋</h1>
+                    <p class="welcome-subtitle">Your AI-Powered Financial Coach</p>
+                    <p class="welcome-description">
+                        I'm here to help you with all your financial questions. Ask me about investments, 
+                        savings, retirement planning, budgeting, or any financial topic!
+                    </p>
+                    
+                    <div class="welcome-features">
+                        <div class="feature-card">
+                            <i class="fas fa-brain"></i>
+                            <h3>Smart Advice</h3>
+                            <p>Get personalized recommendations</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-history"></i>
+                            <h3>Memory</h3>
+                            <p>I remember our conversations</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-shield-alt"></i>
+                            <h3>Financial Focus</h3>
+                            <p>Strictly financial topics only</p>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-start">
+                        <h3>Try asking me:</h3>
+                        <div class="suggested-questions" id="welcomeSuggestions">
+                            <button class="suggestion-chip">How should I allocate my portfolio?</button>
+                            <button class="suggestion-chip">What's a good emergency fund?</button>
+                            <button class="suggestion-chip">Help me plan for retirement</button>
+                            <button class="suggestion-chip">How can I save more money?</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                <!-- Messages will be added here dynamically -->
+            </div>
+
+            <!-- Suggested Questions (appears during chat) -->
+            <div class="suggestions-bar" id="suggestionsBar" style="display: none;">
+                <div class="suggestions-label">
+                    <i class="fas fa-lightbulb"></i> Suggested questions:
+                </div>
+                <div class="suggestions-scroll" id="suggestionsScroll">
+                    <!-- Dynamic suggestions -->
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <button class="btn-attachment" id="attachBtn" title="Add context from calculator">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Ask me anything about finance... 💰"
+                        rows="1"
+                    ></textarea>
+                    
+                    <button class="btn-send" id="sendBtn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                
+                <div class="input-footer">
+                    <span class="footer-text">
+                        <i class="fas fa-info-circle"></i> 
+                        FinBot provides educational guidance, not professional financial advice
+                    </span>
+                    <span class="character-count" id="charCount">0/2000</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+                <button class="btn-close-modal" id="closeSettingsModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>AI Personality</h3>
+                        <p>Choose how FinBot communicates</p>
+                    </div>
+                    <select id="personalitySelect" class="setting-select">
+                        <option value="friendly">Friendly & Casual</option>
+                        <option value="professional">Professional</option>
+                        <option value="enthusiastic">Enthusiastic</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Use Emojis</h3>
+                        <p>Include emojis in responses</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="emojiToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Proactive Suggestions</h3>
+                        <p>Show suggested follow-up questions</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="suggestionsToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Typing Indicators</h3>
+                        <p>Show when FinBot is thinking</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="typingToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Sound Effects</h3>
+                        <p>Play sounds for messages</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="soundToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-secondary" id="resetSettings">
+                    <i class="fas fa-undo"></i> Reset to Defaults
+                </button>
+                <button class="btn-primary" id="saveSettings">
+                    <i class="fas fa-check"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <p>FinBot is thinking...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/coach.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Financial Advisor - Smart Recommendations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_advisor.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="/" class="back-link">
+                        <i class="fas fa-arrow-left"></i> Back to Calculator
+                    </a>
+                </div>
+                <div class="header-center">
+                    <i class="fas fa-brain"></i>
+                    <h1>AI Financial Advisor</h1>
+                </div>
+                <div class="header-right">
+                    <span class="ai-badge">
+                        <i class="fas fa-sparkles"></i> Powered by AI
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="ai-advisor-layout">
+            <!-- Left Panel - Questionnaire -->
+            <div class="questionnaire-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-clipboard-question"></i> Tell Us About Your Finances</h2>
+                    <p>Answer these questions to get personalized AI recommendations</p>
+                </div>
+
+                <form id="aiAdvisorForm" class="advisor-form">
+                    <!-- Personal Information -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-user"></i> Personal Information</h3>
+                        
+                        <div class="form-group">
+                            <label for="age">Your Age</label>
+                            <input type="number" id="age" name="age" min="18" max="100" required>
+                            <small>Helps determine investment timeline</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="riskTolerance">Risk Tolerance</label>
+                            <select id="riskTolerance" name="riskTolerance" required>
+                                <option value="">Select...</option>
+                                <option value="conservative">Conservative - Safety first, minimal risk</option>
+                                <option value="moderate">Moderate - Balanced approach</option>
+                                <option value="aggressive">Aggressive - High growth potential</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="investmentGoal">Primary Investment Goal</label>
+                            <select id="investmentGoal" name="investmentGoal" required>
+                                <option value="">Select...</option>
+                                <option value="retirement">Retirement Planning</option>
+                                <option value="wealth">Wealth Accumulation</option>
+                                <option value="house">Buying a Home</option>
+                                <option value="education">Education Fund</option>
+                                <option value="emergency">Emergency Fund</option>
+                                <option value="other">Other Goals</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timeHorizon">Investment Time Horizon (years)</label>
+                            <input type="number" id="timeHorizon" name="timeHorizon" min="1" max="50" required>
+                            <small>How long until you need the money?</small>
+                        </div>
+                    </div>
+
+                    <!-- Financial Situation -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-wallet"></i> Financial Situation</h3>
+                        
+                        <div class="form-group">
+                            <label for="currentCapital">Current Total Capital/Savings</label>
+                            <div class="input-with-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="currentCapital" name="currentCapital" step="1000" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="monthlyIncome">Monthly Income (after tax)</label>
+                            <div class="input-with-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="monthlyIncome" name="monthlyIncome" step="100" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="monthlyExpenses">Monthly Expenses</label>
+                            <div class="input-with-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="monthlyExpenses" name="monthlyExpenses" step="100" min="0" required>
+                            </div>
+                            <div class="info-badge" id="savingsRate">
+                                <i class="fas fa-info-circle"></i> Savings Rate: --
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="existingDebts">Existing Debts (total)</label>
+                            <div class="input-with-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="existingDebts" name="existingDebts" step="100" min="0" value="0">
+                            </div>
+                            <small>Credit cards, loans, mortgages, etc.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="emergencyFund">Emergency Fund (months covered)</label>
+                            <input type="number" id="emergencyFund" name="emergencyFund" step="0.5" min="0" max="24" value="0">
+                            <small>Recommended: 3-6 months of expenses</small>
+                        </div>
+                    </div>
+
+                    <!-- Investment Preferences -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-chart-line"></i> Investment Preferences</h3>
+                        
+                        <div class="form-group">
+                            <label for="expectedReturn">Expected Annual Return (%)</label>
+                            <input type="number" id="expectedReturn" name="expectedReturn" step="0.5" min="0" max="50" value="8">
+                            <small>Historical average: 7-10% for diversified portfolio</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="currentAllocation">Current Investment Allocation</label>
+                            <textarea id="currentAllocation" name="currentAllocation" rows="3" placeholder="e.g., 60% stocks, 30% bonds, 10% cash"></textarea>
+                            <small>Optional: Describe your current investments</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-list-check"></i> Additional Considerations</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="hasRetirementPlan" id="hasRetirementPlan">
+                                    <span>I have an employer retirement plan (401k, etc.)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="hasHealthInsurance" id="hasHealthInsurance">
+                                    <span>I have adequate health insurance</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="willingToIncreaseSavings" id="willingToIncreaseSavings">
+                                    <span>I'm willing to increase my savings rate</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="planningMajorPurchase" id="planningMajorPurchase">
+                                    <span>Planning a major purchase in next 3 years</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Context -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-comment-dots"></i> Additional Context</h3>
+                        
+                        <div class="form-group">
+                            <label for="specificQuestions">Specific Questions or Concerns</label>
+                            <textarea id="specificQuestions" name="specificQuestions" rows="4" placeholder="e.g., Should I pay off debt or invest? How much should I save for retirement? Is my portfolio diversified enough?"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn-gradient btn-gradient-primary btn-large">
+                            <i class="fas fa-brain"></i>
+                            <span>Get AI Recommendations</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Panel - AI Recommendations -->
+            <div class="recommendations-panel" id="recommendationsPanel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-lightbulb"></i> AI Recommendations</h2>
+                    <p>Personalized insights based on your financial profile</p>
+                </div>
+
+                <!-- Initial State -->
+                <div class="recommendations-content" id="recommendationsContent">
+                    <div class="empty-state">
+                        <i class="fas fa-robot"></i>
+                        <h3>Ready to Help!</h3>
+                        <p>Fill out the questionnaire on the left, and I'll analyze your financial situation to provide personalized recommendations.</p>
+                        <div class="features-preview">
+                            <div class="feature-item">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>Portfolio Analysis</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-bullseye"></i>
+                                <span>Goal Planning</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>Risk Assessment</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-route"></i>
+                                <span>Action Plan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons (hidden initially) -->
+                <div class="panel-actions hidden" id="panelActions">
+                    <button class="btn-gradient btn-gradient-secondary" onclick="exportRecommendations()">
+                        <i class="fas fa-download"></i> Export as PDF
+                    </button>
+                    <button class="btn-gradient btn-gradient-success" onclick="saveRecommendations()">
+                        <i class="fas fa-save"></i> Save Recommendations
+                    </button>
+                    <button class="btn btn-outline" onclick="resetForm()">
+                        <i class="fas fa-redo"></i> Start Over
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal hidden" id="loadingModal">
+        <div class="modal-content loading-modal-content">
+            <div class="loading-spinner-large">
+                <i class="fas fa-brain fa-spin"></i>
+            </div>
+            <h3>AI is analyzing your financial profile...</h3>
+            <p id="loadingMessage">Preparing personalized recommendations</p>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/ai_advisor.js') }}"></script>
+</body>
+</html>

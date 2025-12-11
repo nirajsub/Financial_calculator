@@ -75,6 +75,9 @@ async function handleFormSubmit(e) {
         expense_utilization_rate: parseFloat(document.getElementById('expense_utilization_rate').value),
         annual_expense_increase_rate: parseFloat(document.getElementById('annual_expense_increase_rate').value),
         years: parseInt(document.getElementById('years').value),
+        monthly_income: parseFloat(document.getElementById('monthly_income').value) || 0,
+        years_of_active_income: parseInt(document.getElementById('years_of_active_income').value) || 0,
+        annual_income_increase_rate: parseFloat(document.getElementById('annual_income_increase_rate').value) || 10,
         emergency_withdrawals: emergencyWithdrawals,
         expense_utilization_overrides: expenseUtilizationOverrides
     };
@@ -115,10 +118,97 @@ async function handleFormSubmit(e) {
     }
 }
 
+// Display configuration information
+function displayConfiguration(config) {
+    const configContainer = document.getElementById('configInfo');
+    
+    const configHTML = `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 2rem; color: white; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);">
+            <div style="display: flex; align-items: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-info-circle" style="font-size: 1.5rem; margin-right: 0.75rem;"></i>
+                <h3 style="margin: 0; font-size: 1.5rem; font-weight: 600;">Initial Configuration</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Total Capital</div>
+                    <div style="font-size: 1.5rem; font-weight: 700;">${formatCurrency(config.total_capital)}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Investment Capital (${config.investment_percentage}%)</div>
+                    <div style="font-size: 1.5rem; font-weight: 700;">${formatCurrency(config.investment_capital)}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Savings Capital (${config.savings_percentage}%)</div>
+                    <div style="font-size: 1.5rem; font-weight: 700;">${formatCurrency(config.savings_capital)}</div>
+                </div>
+            </div>
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 1.5rem 0; padding-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                ${config.has_active_income ? `
+                <div style="grid-column: 1 / -1; background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <i class="fas fa-briefcase" style="font-size: 1.25rem;"></i>
+                        <div style="font-size: 1rem; font-weight: 600;">Active Income Stream</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                        <div>
+                            <div style="font-size: 0.875rem; opacity: 0.9;">Monthly Income</div>
+                            <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${formatCurrency(config.monthly_income)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; opacity: 0.9;">Years of Income</div>
+                            <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.years_of_active_income} years</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; opacity: 0.9;">Annual Income Growth</div>
+                            <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.annual_income_increase_rate.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Expected Annual Investment Return</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.annual_return_rate.toFixed(1)}%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Expected Annual Savings Return</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.savings_return_rate.toFixed(1)}%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Initial Monthly Expense Allocation</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${formatCurrency(config.initial_monthly_expense)}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Initial Yearly Expense Allocation</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${formatCurrency(config.initial_yearly_expense)}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Annual Expense Increase Rate</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.annual_expense_increase_rate.toFixed(1)}%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Monthly Expense Utilization</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.expense_utilization_rate.toFixed(1)}%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Projection Period</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; margin-top: 0.25rem;">${config.projection_years} years</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    configContainer.innerHTML = configHTML;
+}
+
 // Display results
 function displayResults(data) {
     const resultsSection = document.getElementById('results');
     resultsSection.classList.remove('hidden');
+    
+    // Display configuration information
+    if (data.configuration) {
+        displayConfiguration(data.configuration);
+    }
     
     // Display summary cards
     displaySummaryCards(data.summary);
@@ -229,6 +319,7 @@ function createCharts(results, summary) {
     chartInstances = {};
     
     createCapitalGrowthChart(results);
+    createFirstYearMonthlyChart(results);
     createAssetAllocationChart(results);
     createReturnsChart(results);
     createExpenseCoverageChart(results);
@@ -300,6 +391,164 @@ function createCapitalGrowthChart(results) {
             scales: {
                 y: {
                     beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return '₹' + formatNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// First Year Monthly Breakdown Chart
+function createFirstYearMonthlyChart(results) {
+    // Check if we have month-by-month data (first year should have monthly_details)
+    const firstYear = results.find(r => r.year === 1);
+    
+    if (!firstYear || !firstYear.monthly_details || firstYear.monthly_details.length === 0) {
+        // Hide the chart if no monthly data available
+        document.getElementById('firstYearMonthlyChartCard').style.display = 'none';
+        return;
+    }
+    
+    // Show the chart card
+    document.getElementById('firstYearMonthlyChartCard').style.display = 'block';
+    
+    const ctx = document.getElementById('firstYearMonthlyChart').getContext('2d');
+    const monthlyData = firstYear.monthly_details;
+    
+    // Prepare data
+    const months = monthlyData.map((m, idx) => `Month ${m.month}`);
+    const investmentData = monthlyData.map(m => m.investment_end);
+    const savingsData = monthlyData.map(m => m.savings_end);
+    const expenseWithdrawn = monthlyData.map(m => m.expense_withdrawn);
+    const actualExpense = monthlyData.map(m => m.actual_expense);
+    const investmentReturn = monthlyData.map(m => m.investment_return);
+    const savingsReturn = monthlyData.map(m => m.savings_return);
+    
+    chartInstances.firstYearMonthly = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Investment Capital',
+                    data: investmentData,
+                    type: 'line',
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 1
+                },
+                {
+                    label: 'Savings Capital',
+                    data: savingsData,
+                    type: 'line',
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                    order: 1
+                },
+                {
+                    label: 'Expense Withdrawn',
+                    data: expenseWithdrawn,
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    order: 2
+                },
+                {
+                    label: 'Actual Expense',
+                    data: actualExpense,
+                    backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                    borderColor: '#dc2626',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    order: 2
+                },
+                {
+                    label: 'Investment Return',
+                    data: investmentReturn,
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                    borderColor: '#22c55e',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    order: 2
+                },
+                {
+                    label: 'Savings Return',
+                    data: savingsReturn,
+                    backgroundColor: 'rgba(251, 146, 60, 0.7)',
+                    borderColor: '#fb923c',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Month-by-Month Capital Flow (Year 1)'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ₹' + formatNumber(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Capital Balance (₹)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '₹' + formatNumber(value);
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Monthly Transactions (₹)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    },
                     ticks: {
                         callback: function(value) {
                             return '₹' + formatNumber(value);

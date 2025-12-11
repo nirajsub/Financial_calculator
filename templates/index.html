@@ -23,6 +23,12 @@
                     <a href="#calculator" class="nav-link active">Calculator</a>
                     <a href="#results" class="nav-link">Results</a>
                     <a href="#compare" class="nav-link">Compare</a>
+                    <a href="/ai-advisor" class="nav-link nav-link-ai">
+                        <i class="fas fa-robot"></i> AI Advisor
+                    </a>
+                    <a href="/coach" class="nav-link nav-link-ai">
+                        <i class="fas fa-robot"></i> AI Coach
+                    </a>
                 </nav>
             </div>
         </div>
@@ -116,6 +122,38 @@
                                     </label>
                                     <input type="number" id="years" name="years" value="5" step="1" min="1" max="30" required>
                                     <small class="help-text">Number of years to project</small>
+                                </div>
+
+                                <!-- Income Section -->
+                                <div class="form-group full-width" style="border-top: 2px solid var(--border-color); padding-top: 1.5rem; margin-top: 1rem;">
+                                    <label style="font-size: 1.1rem; font-weight: 600; color: var(--primary-color); margin-bottom: 1rem; display: block;">
+                                        <i class="fas fa-briefcase"></i> Monthly Income Stream (Optional)
+                                        <span class="info-icon" title="Add your regular monthly income from job or business">ⓘ</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="monthly_income">
+                                        <i class="fas fa-rupee-sign"></i> Monthly Income (₹)
+                                    </label>
+                                    <input type="number" id="monthly_income" name="monthly_income" value="0" step="10000" min="0">
+                                    <small class="help-text">Regular monthly income (0 = no active income)</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="years_of_active_income">
+                                        <i class="fas fa-clock"></i> Years of Active Income
+                                    </label>
+                                    <input type="number" id="years_of_active_income" name="years_of_active_income" value="0" step="1" min="0" max="50">
+                                    <small class="help-text">How many years will this income continue</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="annual_income_increase_rate">
+                                        <i class="fas fa-chart-line"></i> Annual Income Growth (%)
+                                    </label>
+                                    <input type="number" id="annual_income_increase_rate" name="annual_income_increase_rate" value="10" step="1" min="0" max="50">
+                                    <small class="help-text">Expected annual salary/income increase</small>
                                 </div>
                             </div>
 
@@ -241,6 +279,11 @@
                     </div>
                 </div>
 
+                <!-- Configuration Information -->
+                <div class="config-info-container" id="configInfo" style="margin-bottom: 2rem;">
+                    <!-- Configuration will be populated by JavaScript -->
+                </div>
+
                 <!-- Summary Cards -->
                 <div class="summary-grid" id="summaryCards">
                     <!-- Cards will be populated by JavaScript -->
@@ -260,6 +303,21 @@
                         </div>
                         <div class="chart-container">
                             <canvas id="capitalGrowthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- First Year Monthly Breakdown Chart -->
+                    <div class="chart-card" id="firstYearMonthlyChartCard" style="display: none;">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-calendar-alt"></i> First Year Monthly Breakdown</h3>
+                            <div class="chart-controls">
+                                <button class="btn-icon" onclick="downloadChart('firstYearMonthlyChart')" title="Download Chart">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="firstYearMonthlyChart"></canvas>
                         </div>
                     </div>
 
