@@ -1,8 +1,3 @@
-"""
-AI Financial Coach - Conversational AI Assistant
-Handles multi-turn conversations with memory and financial context
-"""
-
 from bytez import Bytez
 from datetime import datetime
 import json
@@ -10,15 +5,11 @@ from typing import List, Dict, Optional
 
 
 class FinancialCoach:
-    """AI-powered financial coach with conversation memory and context"""
-    
     def __init__(self):
-        """Initialize the AI coach with Bytez SDK"""
         self.api_key = "4b7a569738ee991d1c242dd0738158d7"
         self.sdk = Bytez(self.api_key)
         self.model = self.sdk.model("openai/gpt-4o")
         
-        # System prompt - defines AI personality and constraints
         self.system_prompt = """You are an expert AI Financial Coach named "FinBot" - a friendly, knowledgeable, and empathetic financial advisor assistant with DEEP UNDERSTANDING of the NFGA Financial Calculator algorithm.
 
 **YOUR ROLE:**
@@ -145,12 +136,10 @@ When users ask about their calculations:
 
 Remember: You're here to educate, empower, and support users on their financial journey with deep understanding of their calculation results! 🚀"""
         
-        # Conversation memory
         self.conversations: Dict[str, List[Dict]] = {}
         self.user_context: Dict[str, Dict] = {}
     
     def _check_financial_topic(self, message: str) -> bool:
-        """Check if message is about financial topics"""
         financial_keywords = [
             'money', 'finance', 'investment', 'savings', 'budget', 'retirement',
             'stock', 'bond', 'fund', 'portfolio', 'capital', 'wealth', 'income',
@@ -164,33 +153,27 @@ Remember: You're here to educate, empower, and support users on their financial 
         
         message_lower = message.lower()
         
-        # Check for greetings (always allow)
         greetings = ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 
                     'good evening', 'how are you', 'what can you do', 'help', 'start']
         if any(greeting in message_lower for greeting in greetings):
             return True
         
-        # Check for financial keywords
         return any(keyword in message_lower for keyword in financial_keywords)
     
     def get_conversation_history(self, session_id: str) -> List[Dict]:
-        """Get conversation history for a session"""
         if session_id not in self.conversations:
             self.conversations[session_id] = []
         return self.conversations[session_id]
     
     def add_user_context(self, session_id: str, context: Dict):
-        """Add or update user context (financial profile, goals, etc.)"""
         if session_id not in self.user_context:
             self.user_context[session_id] = {}
         self.user_context[session_id].update(context)
     
     def get_user_context(self, session_id: str) -> Dict:
-        """Get user context for personalization"""
         return self.user_context.get(session_id, {})
     
     def _build_context_prompt(self, session_id: str) -> str:
-        """Build context prompt from user's financial data"""
         context = self.get_user_context(session_id)
         
         if not context:
@@ -198,7 +181,6 @@ Remember: You're here to educate, empower, and support users on their financial 
         
         context_parts = ["\n**USER FINANCIAL CONTEXT:**"]
         
-        # Basic financial profile
         if 'total_capital' in context:
             context_parts.append(f"- Current Capital: ${context['total_capital']:,.2f}")
         
@@ -248,7 +230,7 @@ Remember: You're here to educate, empower, and support users on their financial 
             context_parts.append(f"- Active Income Duration: {context['years_of_active_income']} years")
             context_parts.append("  (Calculator uses 80/20 allocation with active income)")
         
-        # Calculation results if available
+
         if 'calculation_results' in context:
             results = context['calculation_results']
             context_parts.append("\n**RECENT CALCULATION RESULTS:**")
@@ -284,7 +266,6 @@ Remember: You're here to educate, empower, and support users on their financial 
                         context_parts.append(f"- Total Income Received: ${total_income:,.2f}")
                         context_parts.append("  (Income covered expenses first, preserving capital)")
                 
-                # Coverage analysis
                 if 'returns' in summary and 'expenses' in summary:
                     total_returns = summary['returns'].get('investment', 0) + summary['returns'].get('savings', 0)
                     total_expenses = summary['expenses'].get('total_actual', 0)
@@ -300,13 +281,12 @@ Remember: You're here to educate, empower, and support users on their financial 
                         else:
                             context_parts.append("  ❌ Returns cover little - rapid capital depletion")
             
-            # Year-by-year trend
             if 'results' in results and len(results['results']) > 1:
                 first_year = results['results'][0]
                 last_year = results['results'][-1]
                 
-                if first_year.get('year') == 0:  # Has Year 0
-                    first_year = results['results'][1]  # Use Year 1 instead
+                if first_year.get('year') == 0:
+                    first_year = results['results'][1]
                 
                 context_parts.append(f"\n**TRAJECTORY ANALYSIS:**")
                 context_parts.append(f"- Year {first_year.get('year', 1)} Capital: ${first_year.get('total_capital_end', 0):,.0f}")
@@ -326,7 +306,6 @@ Remember: You're here to educate, empower, and support users on their financial 
         return "\n".join(context_parts)
     
     def chat(self, session_id: str, message: str) -> Dict:
-        print(f"[FinancialCoach] Received message for session {session_id}: {message}")
         try:
             if not self._check_financial_topic(message):
                 return {
@@ -337,10 +316,8 @@ Remember: You're here to educate, empower, and support users on their financial 
                     'is_financial': False
                 }
             
-            # Get conversation history
             history = self.get_conversation_history(session_id)
             
-            # Build messages for API
             messages = [
                 {
                     "role": "system",
@@ -348,20 +325,17 @@ Remember: You're here to educate, empower, and support users on their financial 
                 }
             ]
             
-            # Add conversation history (last 10 messages for context)
             for msg in history[-10:]:
                 messages.append({
                     "role": msg['role'],
                     "content": msg['content']
                 })
             
-            # Add current user message
             messages.append({
                 "role": "user",
                 "content": message
             })
             
-            # Call AI model
             output, error = self.model.run(messages)
             
             if error:
@@ -372,10 +346,8 @@ Remember: You're here to educate, empower, and support users on their financial 
                     'timestamp': datetime.now().isoformat()
                 }
             
-            # Extract response
             ai_response = output.get('message', {}).get('content', 'I apologize, I encountered an issue. Please try again.')
             
-            # Save to conversation history
             history.append({
                 "role": "user",
                 "content": message,
@@ -406,14 +378,12 @@ Remember: You're here to educate, empower, and support users on their financial 
             }
     
     def clear_conversation(self, session_id: str):
-        """Clear conversation history for a session"""
         if session_id in self.conversations:
             self.conversations[session_id] = []
         if session_id in self.user_context:
             del self.user_context[session_id]
     
     def get_conversation_summary(self, session_id: str) -> Dict:
-        """Get summary of conversation"""
         history = self.get_conversation_history(session_id)
         context = self.get_user_context(session_id)
         
@@ -432,11 +402,9 @@ Remember: You're here to educate, empower, and support users on their financial 
         }
     
     def suggest_questions(self, session_id: str) -> List[str]:
-        """Suggest relevant follow-up questions based on context"""
         context = self.get_user_context(session_id)
         history = self.get_conversation_history(session_id)
         
-        # Default suggestions
         default_suggestions = [
             "How should I allocate my investment portfolio?",
             "What's a good emergency fund target?",
@@ -445,7 +413,6 @@ Remember: You're here to educate, empower, and support users on their financial 
             "What investment strategy fits my risk tolerance?"
         ]
         
-        # Context-aware suggestions
         if context:
             suggestions = []
             
@@ -474,5 +441,4 @@ Remember: You're here to educate, empower, and support users on their financial 
         return default_suggestions
 
 
-# Global instance
 coach = FinancialCoach()
